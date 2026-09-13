@@ -1,0 +1,41 @@
+function [highDataFusion_PLS_result] = tq_highDataFusion_LR_getResult(ytrue, ypred_nir, ypred_hsi, cal_idx, test_idx )
+    
+    ycal = ytrue(cal_idx);
+    ytest = ytrue(test_idx);
+    ypred_cal1 = ypred_nir(cal_idx);
+    ypred_cal2 = ypred_hsi(cal_idx);
+    ypred_test1 = ypred_nir(test_idx);
+    ypred_test2 = ypred_hsi(test_idx);
+    
+    
+    Xcal3 = [ones(length(ypred_cal1), 1), ypred_cal1, ypred_cal2];  
+    %Xtest3 = [ones(length(ypred_test1), 1), ypred_test1, ypred_test2];  
+    beta = regress(ycal, Xcal3); 
+    fm.beta = beta;
+    % 构建回归模型  
+    model = @(a, b) beta(1) + beta(2)*a + beta(3)*b;  
+    
+    y_pred_cal = model(ypred_cal1, ypred_cal2);
+    y_pred_test = model(ypred_test1, ypred_test2);
+    fm.y_pred_cal = y_pred_cal;
+    fm.y_pred_test= y_pred_test;
+    
+    % 计算R2c
+    ycal_mean = mean(ycal);  
+    SS_tot = sum((ycal - ycal_mean).^2);  
+    SS_res = sum((ycal - y_pred_cal).^2);  
+    fm.R2c = 1 - SS_res / SS_tot;  
+    % R2p
+    ytest_mean = mean(ytest);  
+    SS_tot = sum((ytest - ytest_mean).^2);  
+    SS_res = sum((ytest - y_pred_test).^2);  
+    fm.R2p = 1 - SS_res / SS_tot;  
+    
+    fm.RMSEC = sqrt(sumsqr(y_pred_cal - ycal)/length(ycal));
+    fm.RMSEP = sqrt(sumsqr(y_pred_test - ytest)/length(ytest));
+    fm.RPD = std(ytest)/fm.RMSEP;
+    
+    fm.RMSEP_DIV_RMSEC = fm.RMSEP/fm.RMSEC;
+    highDataFusion_PLS_result = fm;
+    
+end
